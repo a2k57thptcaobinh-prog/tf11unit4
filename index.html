@@ -29,7 +29,8 @@ button{font:inherit;cursor:pointer;border:1px solid var(--bd);background:var(--c
 // ====== CẤU HÌNH: phải trùng với student-11a2-tf.html / student-cungco.html ======
 const DB_URL = "https://nghe12unit4-default-rtdb.asia-southeast1.firebasedatabase.app";
 const BAIS = {
-  tf:{cls:"lop11a2_tf",label:"True/False (11A2)",id:"e1",n:4},
+  // key: đáp án đúng của bài True/False; trang giáo viên chấm lại theo key này nên đổi đáp án ở đây là bảng tự đúng theo, kể cả bài đã nộp trước đó
+  tf:{cls:"lop11a2_tf",label:"True/False (11A2)",id:"e1",n:4,key:{e1_1:"False",e1_2:"True",e1_3:"False",e1_4:"False"}},
   cungco:{cls:"lop11_cungco",label:"Củng cố",id:"e1",n:5}
 };
 // =============================================================================
@@ -65,12 +66,17 @@ function assignRanks(list){
     x.rank=rank;prev=x;
   });
 }
+// Chấm lại theo B().key (nếu có): so đáp án học sinh chọn với đáp án đúng, tính lại điểm
+function regrade(list){const K=B().key;if(!K)return;
+  list.forEach(x=>{if(x.status!=="done"||!x.answers)return;let t=0;
+    for(const k in K){const a=x.answers[k];if(a){a.ok=a.v===K[k];if(a.ok)t++}}
+    x.total=t;x.scores=[t]})}
 async function load(){
   const my=seq,cls=B().cls;
   try{
     const r=await fetch(DB_URL+"/"+cls+".json");const d=(await r.json())||{};
     if(my!==seq)return; // đã chuyển sang bài khác trong lúc tải
-    rows=Object.values(d).sort(rankSort);assignRanks(rows);
+    rows=Object.values(d);regrade(rows);rows.sort(rankSort);assignRanks(rows);
     const done=rows.filter(x=>x.status==="done");
     const avg=done.length?(done.reduce((s,x)=>s+x.total,0)/done.length).toFixed(1):"–";
     $("#info").textContent=B().label+" · Tổng "+rows.length+" học sinh · đã nộp "+done.length+" · điểm TB "+avg+"/"+TOTAL+" · xếp hạng theo số câu đúng, rồi thời gian · tự cập nhật mỗi 3 giây";
